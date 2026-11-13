@@ -1,64 +1,159 @@
 # JARVIS — Personal AI Assistant / Voice OS
 
-JARVIS is a personal assistant project exploring a voice-first interface backed by Python and a local large language model (LLM). The goal is to build a practical, modular assistant that can understand spoken requests, reason locally, and respond naturally.
+A small, local-first JARVIS starter for Windows. It combines OpenWhispr dictation, a Python chat loop, and a local language model served by Ollama. The starter is intentionally simple: dictate or type a request in the terminal and receive a text response from the local model.
 
-> **Project status:** Early planning stage. This repository currently contains this README; the application, integrations, and setup process have not been implemented yet. Sections marked as planned describe the intended direction, not working features.
+## What works now
 
-## Project goals
+- Terminal chat with conversation context while the program is running.
+- Local model requests through Ollama's HTTP API.
+- OpenWhispr speech-to-text by dictating at the terminal prompt.
+- `/reset` clears the current conversation; `/quit` exits.
+- No Python packages are required; the program uses the Python standard library.
 
-- Build a voice-first personal assistant.
-- Use OpenWhispr for the voice interaction layer, subject to confirming the exact integration and supported platforms.
-- Use Python for application orchestration and assistant logic.
-- Use a local LLM for language understanding and response generation.
-- Keep components modular so speech, model, and assistant logic can evolve independently.
+## What is not implemented yet
 
-## Planned architecture
+JARVIS does not yet speak responses aloud, listen for a wake word, control the computer, call external tools, or save conversation history between runs. Do not treat model output as an action. These are future project options, not current features.
 
-The intended request path is:
+## How the pieces fit together
 
-1. The user speaks through the OpenWhispr voice interface.
-2. The voice layer provides the recognized request to the Python application.
-3. Python prepares the conversation context and sends a prompt to the configured local LLM.
-4. The model response returns to Python for handling and formatting.
-5. The assistant responds through the available text or voice output.
+1. OpenWhispr transcribes your speech and pastes the text at the active terminal cursor.
+2. You press Enter to submit the text to JARVIS.
+3. Python sends the conversation to Ollama at the local address in your configuration.
+4. Ollama runs the selected model on your computer and returns a text response.
+5. JARVIS prints the response in the terminal.
 
-User voice ↔ OpenWhispr voice interface ↔ Python assistant orchestration ↔ Local LLM response generation
+OpenWhispr dictation is a separate desktop app, not a Python dependency or direct API integration in this starter. Its transcription and cleanup settings control how audio is processed. Choose a local speech model in OpenWhispr if you want speech transcription to stay on-device; verify its current settings before using sensitive audio.
 
-This is a design outline. The transport between components, model runtime, audio formats, and supported operating systems are still to be selected and documented.
+## Requirements
 
-## Technology direction
+- Windows 10 or 11 (the commands below use PowerShell).
+- Python 3.10 or newer.
+- Git, to clone the repository.
+- Ollama for Windows, with a local model downloaded.
+- OpenWhispr for Windows, optional for voice input; typed chat works without it.
 
-| Component | Intended role | Current decision |
+The model needs several gigabytes of disk space and enough available memory for your machine. Smaller models use fewer resources but may give simpler answers. Ollama's model page lists current sizes and variants.
+
+## Setup on Windows
+
+### 1. Install Ollama and download a model
+
+Install Ollama from [ollama.com/download](https://ollama.com/download) and start the Ollama app. In PowerShell, download a small starter model:
+
+~~~powershell
+ollama pull qwen3.5:2b
+~~~
+
+Confirm the model runs:
+
+~~~powershell
+ollama run qwen3.5:2b
+~~~
+
+Type a short question, then enter `/bye` to leave Ollama's interactive chat. The JARVIS app uses Ollama's local `/api/chat` endpoint; Ollama normally listens at `http://127.0.0.1:11434`.
+
+If the model is too slow or does not fit your available memory, choose a smaller variant from the [Ollama Qwen 3.5 model page](https://ollama.com/library/qwen3.5) and set that exact model name in `.env`.
+
+### 2. Install OpenWhispr for voice input (optional)
+
+Install OpenWhispr from [openwhispr.com](https://openwhispr.com/). Open its settings and check the dictation shortcut for Windows; shortcuts can vary by version or configuration. OpenWhispr's [dictation guide](https://docs.openwhispr.com/guides/dictation) explains the hotkey and paste behavior. For on-device speech recognition, open Settings > AI Models > Speech-to-Text > Dictation > Local in OpenWhispr, choose a local model such as Orukeet, and download it. The [local models guide](https://docs.openwhispr.com/guides/local-models) explains the current options.
+
+### 3. Clone JARVIS and create a virtual environment
+
+~~~powershell
+git clone https://github.com/akhileswarta744/jarvis.git
+cd jarvis
+py -3.10 -m venv .venv
+~~~
+
+If you have a newer Python release, replace `-3.10` with its installed version, or use `py -m venv .venv`. Activate the environment:
+
+~~~powershell
+..venvScriptsActivate.ps1
+~~~
+
+If PowerShell blocks activation, you can run JARVIS using the environment's Python directly in the next step; changing the system execution policy is not required.
+
+### 4. Configure the Ollama model
+
+Create your local configuration file from the example:
+
+~~~powershell
+Copy-Item .env.example .env
+~~~
+
+The starter defaults are:
+
+~~~text
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3.5:2b
+OLLAMA_TIMEOUT_SECONDS=120
+~~~
+
+Edit `.env` if your Ollama address or model differs. `.env` is excluded from Git so local settings stay out of commits.
+
+### 5. Start JARVIS
+
+With the virtual environment activated:
+
+~~~powershell
+python jarvis.py
+~~~
+
+Or, without activating it:
+
+~~~powershell
+..venvScriptspython.exe jarvis.py
+~~~
+
+No `requirements.txt` install step is needed because the current starter has no third-party Python dependencies.
+
+## Using voice input
+
+1. Start JARVIS and leave the terminal focused at the `You:` prompt.
+2. Press your configured OpenWhispr dictation shortcut, speak, and stop dictation.
+3. Check the transcribed text in the terminal, then press Enter to send it to the local model.
+4. Type `/reset` to clear conversation context or `/quit` to exit.
+
+Dictation pastes text into whichever app has focus. Keep the JARVIS terminal focused while dictating.
+
+## Configuration
+
+| Setting | Default | Purpose |
 |---|---|---|
-| OpenWhispr | Voice interaction | Proposed; integration details to be confirmed |
-| Python | Application and assistant logic | Planned |
-| Local LLM | On-device language model | Planned; model and runtime not selected |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Base address of the local Ollama service |
+| `OLLAMA_MODEL` | `qwen3.5:2b` | Model tag installed in Ollama |
+| `OLLAMA_TIMEOUT_SECONDS` | `120` | Maximum wait for each response |
 
-No model name, hardware requirement, package list, or install command is specified yet. These will be added once the first implementation choices are made and tested.
+Settings can be placed in the ignored `.env` file or supplied as environment variables. Do not add API keys, passwords, or personal secrets to this public repository.
 
-## Development roadmap
+## Project files
 
-1. Confirm the OpenWhispr integration path and target operating system.
-2. Choose a local model runtime and define how Python will call it.
-3. Build a minimal request-and-response loop and document verified setup steps.
-4. Add voice input and output, including clear handling for unavailable devices or services.
-5. Explore assistant capabilities such as conversation context and optional tools, documenting permissions and limitations before enabling them.
-6. Add tests, configuration guidance, and troubleshooting notes as each feature becomes available.
+- `jarvis.py` — terminal conversation loop and Ollama API client.
+- `.env.example` — safe sample settings; copy it to `.env`.
+- `.gitignore` — excludes local settings, virtual environments, and Python cache files.
+- `README.md` — setup and usage guide.
 
-## Privacy and configuration
+## Troubleshooting
 
-Local model inference is the intended direction. Complete privacy behavior will depend on the selected voice interface and other integrations; it should be verified before describing the system as fully offline. Do not commit passwords, API keys, access tokens, or other secrets. Future configuration examples should use placeholders and explain where local settings belong.
+- **Could not reach Ollama:** Open the Ollama app, confirm it is running, and check `OLLAMA_BASE_URL`. The default local endpoint is `http://127.0.0.1:11434`.
+- **Model not found:** Run `ollama pull qwen3.5:2b`, or set `OLLAMA_MODEL` to the exact tag you installed.
+- **Responses time out:** Give the model more time by increasing `OLLAMA_TIMEOUT_SECONDS`, or use a smaller model supported by your hardware.
+- **Dictation goes to another window:** Refocus the terminal before using the OpenWhispr shortcut.
+- **No dictation appears:** Check the OpenWhispr shortcut, microphone selection, transcription model, and Windows microphone permissions.
 
-## Repository contents
+## Privacy notes
 
-- README.md — project overview, current status, and planned direction.
+JARVIS sends prompts to the Ollama service at the configured address. With the default address and a local model, inference runs on your computer. Model downloads require an internet connection. Speech privacy depends on OpenWhispr's selected transcription and cleanup settings; cloud providers may process audio or text remotely. See OpenWhispr's [local model guide](https://docs.openwhispr.com/guides/local-models) and verify provider settings before dictating sensitive information.
 
-Application code and installation instructions will be added as they are implemented.
+## Roadmap
 
-## Contributing
-
-This project is at the planning stage. Issues and pull requests can help shape the architecture. Please describe the proposed change, its intended behavior, and any external services or permissions it needs.
+- Add spoken responses (text-to-speech).
+- Add an optional wake-word flow.
+- Add persistent memory with clear controls for what is saved and deleted.
+- Add optional tools behind explicit confirmations and a reviewable permissions model.
+- Add setup checks, tests, and platform-specific instructions as those features are implemented.
 
 ## License
 
-No license has been selected yet. Until one is added, the repository does not grant general permission to reuse or redistribute its contents.
+No license has been selected. Until a license is added, this repository does not grant general permission to reuse or redistribute its contents.
