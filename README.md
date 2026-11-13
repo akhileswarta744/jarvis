@@ -63,13 +63,13 @@ Install OpenWhispr from [openwhispr.com](https://openwhispr.com/). Open its sett
 ~~~powershell
 git clone https://github.com/akhileswarta744/jarvis.git
 cd jarvis
-py -3.10 -m venv .venv
+py -m venv .venv
 ~~~
 
-If you have a newer Python release, replace `-3.10` with its installed version, or use `py -m venv .venv`. Activate the environment:
+Activate the environment:
 
 ~~~powershell
-..venvScriptsActivate.ps1
+./.venv/Scripts/Activate.ps1
 ~~~
 
 If PowerShell blocks activation, you can run JARVIS using the environment's Python directly in the next step; changing the system execution policy is not required.
@@ -103,7 +103,7 @@ python jarvis.py
 Or, without activating it:
 
 ~~~powershell
-..venvScriptspython.exe jarvis.py
+./.venv/Scripts/python.exe jarvis.py
 ~~~
 
 No `requirements.txt` install step is needed because the current starter has no third-party Python dependencies.
